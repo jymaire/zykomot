@@ -2,6 +2,8 @@
 
 Le but de ce workshop est de vous présenter comment boostraper une application sous Quarkus et la déployer sur Kubernetes
 
+Il est très fortement inspiré d'un workshop disponible sur le site officiel https://quarkus.io/quarkus-workshops/super-heroes/
+
 ## Pourquoi Quarkus
 
 Quarkus répond au besoin de pouvoir exécuter des applications Java dans le cloud, notamment en utilisant le mode serverless des différents clouds  (e.g AWS Lambda ). Jusqu'à présent, cela était impossible du fait du temps de démarrage d'une application (plusieurs secondes, voir dizaines de secondes). Un autre objectif est également de réduire l'empreinte mémoire des applications (qui peuvent faire plus d'une dizaine de Mo pour un simple "Hello World")
@@ -24,7 +26,7 @@ L'ensemble des commandes de ce workshop ont été testées sur Linux (Ubuntu 19.
 
 ### But de notre application
 
-Nous allons créer une appli web permettant de suivre les bilans psychomoteurs réalisés par une psychomotricienne. Cela permet de suivre les progrès réalisés par les patients en fonction de leurs pathologies. Nous appelerons cette application *Zykomot*.
+Nous allons créer une appli web permettant de suivre les bilans psychomoteurs réalisés par une psychomotricienne. Cela permet de suivre les progrès réalisés par les patients en fonction de leurs pathologies. Nous appellerons cette application *Zykomot*.
 
 ### Générer un Hello World
 
@@ -83,7 +85,7 @@ Voici l'arborescence créée :
 Plusieurs choses intéressantes : 
 
 - un utilitaire *mvnw* qui va nous permettre de lancer des commandes "Quarkus" sans avoir à passer toutes les options à GraalVM.
-- un pom.xml avec pas mal de dépendences déjà pré choisies (on reviendra dessus après)
+- un pom.xml avec pas mal de dépendances déjà pré choisies (on reviendra dessus après)
 - Deux Dockerfile : un pour compiler à destination d'une JVM, un pour compiler du code natif
 - Notre classe, contenant un "Hello world"
 - Des tests
@@ -181,7 +183,7 @@ Résultat, le pom a été modifié :
 </dependency>
 ```
 
-Des extensions ? Mais pourquoi donc ne pas utiliser mes dépendences habituelles ? Et bien tout simplement car pour optimiser le temps de démarrage de l'application, Quarkus a besoin d'optimiser certaines choses avec les frameworks utilisés. Parfois l'équipe a pu pousser des patchs sur les branches upstream des frameworks, parfois non. Et c'est donc des versions patchées qui sont utilisées.
+Des extensions ? Mais pourquoi donc ne pas utiliser mes dépendances habituelles ? Et bien tout simplement car pour optimiser le temps de démarrage de l'application, Quarkus a besoin d'optimiser certaines choses avec les frameworks utilisés. Parfois l'équipe a pu pousser des patchs sur les branches upstream des frameworks, parfois non. Et c'est donc des versions patchées qui sont utilisées.
 
 La liste des extensions utilisées est disponible sur le site : https://quarkus.io/extensions/ . On peut également les lister grâce à `mvn quarkus:list-extensions`
 
@@ -254,7 +256,7 @@ Dans ce fichier, on précise qu'on attend et renvoie du json. La magie de Panach
 
 ### Insérer une donnée en base
 
-Maintenant, essayons d'enregistrer des informations dans notre application. Pour effectuer les requêtes POST, je vais utilser cURL, le choix des outils est libre.
+Maintenant, essayons d'enregistrer des informations dans notre application. Pour effectuer les requêtes POST, je vais utiliser cURL, le choix des outils est libre.
 
 Dans le fichier *PatientResource.java*, nous allons rajouter un endpoint POST
 
@@ -303,7 +305,45 @@ void testCreateEndpoint() {
 
  Même chose, l'application est démarrée pour ce test et les données sont insérées dans notre base (on peut aller vérifier une fois les tests exécutés)
 
+Quarkus utilise la notion de profiles. Il est donc possible de surcharger la configuration pour utiliser par exemple une base *in memory* pour l'exécution des tests. Pour cela, il suffit de rajouter une propriété dans *application.properties* et de la préfixer avec le nom du profile. Les profiles par défaut étant dev, test et prod.
 
+## Déployer notre application
 
+Maintenant que nous avons une application minimale qui fonctionne, regardons comment la packager et la déployer.
 
+### Packager notre application
+
+#### En mode JVM
+
+Pour cela, on utilise (sans grand suspense, je vous l'accorde) la commande `./mvnw package`. Cela va nous permettre de produire deux jars dans */target* :
+
+- zykomot-1.0-SNAPSHOT.jar
+- zykomot-1.0-SNAPSHOT-runner.jar
+
+Le premier jar est le jar généré par Maven, de manière classique.
+
+Le deuxième jar est un jar exécutable. Il ne contient cependent pas toutes les dépendances qui se trouvent dans *target/lib* (donc si vous déplacez ce jar, il faudra aussi déplacer le répertoire *lib* en même temps). On peut vérifier cela en lançant la commande
+
+`java -jar zykomot-1.0-SNAPSHOT-runner.jar`
+
+Ensuite, il nous faut construire l'image Docker avec
+
+`docker build -f src/main/docker/Dockerfile.jvm -t quarkus/zykomot-jvm .`
+
+À noter qu'il y a deux Dockerfile dans le répertoire *src/main/docker*. Le premier pour construire un container qui exécute l'application en mode JVM. Le deuxième permet de construire un container qui exécute l'application en mode natif, sans JVM.
+
+Si je lance `docker images`, je vois bien mon image *quarkus/zykomot-jvm* qui vient d'être créée.
+
+> À noter que le temps de build peut être assez long et consommateur de CPU. En effet, Quarkus doit décider quelles classes garder et lesquelles supprimer. Ce qu'on appelle la compilation AOT (Ahead Of Time)
+
+#### En mode natif
+
+Faisons maintenant la même chose pour l'image native. Afin de créer un exécutable natif, il faut utiliser le profil *native*.
+`mvn package -Pnative`
+
+De la même manière, il faut ensuite construire l'image Docker
+
+`docker build -f src/main/docker/Dockerfile.native -t quarkus/zykomot .`
+
+Quand on compare la taille des deux images générées, on peut voir une différence significative entre les deux (300MB vs 218MB)
 
