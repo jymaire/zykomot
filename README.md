@@ -12,6 +12,31 @@ Quarkus répond au besoin de pouvoir exécuter des applications Java dans le clo
 
 L'idée, c'est  de transférer le plus possible de la charge qui est traditionnellement effectuée lors du démarrage de l'application, vers l'étape de build de l'application. Cette étape sera donc plus longue mais ne sera faite qu'une seule fois.
 
+### GraalVM
+
+#### Rapide présentation
+
+GraalVM est une machine virtuelle qui permet d'exécuter différents langages dans un même code (ceux supportés par la JVM et la LLVM, JS, Python, Ruby, R). Du coup, on peut se retrouver avec du code mixant du JS dans du Java :
+
+```java
+import org.graalvm.polyglot.*;
+
+class Polyglot {
+    public static void main(String[] args) {
+        Context polyglot = Context.create();
+        Value array = polyglot.eval("js", "[1,2,42,4]");
+        int result = array.getArrayElement(2).asInt();
+        System.out.println(result);
+    }
+}
+```
+
+Une autre caractéristique intéressante est que GraalVM permet de compiler des applications en natif (en utilisant la compilation Ahead-Of-Time). Cela permet d'avoir d'avoir des images plus légères et plus rapides à démarrer. L'exécutable contient SubstrateVM qui contient tous les éléments nécessaires au runtime. L'utilitaire de GraalVM *native-image* effectue une analyse statique du code afin d'enlever le maximum de code inutile dans le binaire final.
+
+#### Pricing
+
+GraalVM possède deux licences : la version communautaire et la version entreprise. La version entreprise apporte notamment des améliorations en terme de performance et de sécurité (le détail sur la page de [téléchargement](https://www.graalvm.org/downloads/)) Le [prix](https://shop.oracle.com/apex/f?p=dstore:4:9944669784388:::RIR:IR_ROWFILTER:graalvm) de la version entreprise varie selon le nombre de licences achetées, de 130 à 194€. Quarkus fonctionne avec les deux versions.
+
 ## Démarrer un nouveau projet
 
 ### Pré requis
@@ -108,7 +133,7 @@ __  ____  __  _____   ___  __ ____  ______
 2020-03-19 15:18:22,150 INFO  [io.quarkus] (main) Installed features: [cdi, resteasy]
 ```
 
-À noter le goal "dev" qui permet de faire du rechargemet à chaud. Chaque fois que l'API va être appelée, Quarkus va redémarrer l'application si le code a été changé. Comme dans notre cas, le démarrage a duré moins d'une seconde, cela n'est pas dérangeant.
+À noter le goal "dev" qui permet de faire du rechargement à chaud. Chaque fois que l'API va être appelée, Quarkus va redémarrer l'application si le code a été changé. Comme dans notre cas, le démarrage a duré moins d'une seconde, cela n'est pas dérangeant.
 
 Si vous coupez et relancez la commande, le temps de compilation devrait diminuer un petit peu.
 
@@ -322,7 +347,7 @@ Pour cela, on utilise (sans grand suspense, je vous l'accorde) la commande `./mv
 
 Le premier jar est le jar généré par Maven, de manière classique.
 
-Le deuxième jar est un jar exécutable. Il ne contient cependent pas toutes les dépendances qui se trouvent dans *target/lib* (donc si vous déplacez ce jar, il faudra aussi déplacer le répertoire *lib* en même temps). On peut vérifier cela en lançant la commande
+Le deuxième jar est un jar exécutable. Il ne contient cependant pas toutes les dépendances qui se trouvent dans *target/lib* (donc si vous déplacez ce jar, il faudra aussi déplacer le répertoire *lib* en même temps). On peut vérifier cela en lançant la commande
 
 `java -jar zykomot-1.0-SNAPSHOT-runner.jar`
 
