@@ -332,6 +332,8 @@ void testCreateEndpoint() {
 
 Quarkus utilise la notion de profiles. Il est donc possible de surcharger la configuration pour utiliser par exemple une base *in memory* pour l'exécution des tests. Pour cela, il suffit de rajouter une propriété dans *application.properties* et de la préfixer avec le nom du profile. Les profiles par défaut étant dev, test et prod.
 
+> Il est également possible d'effectuer des tests sur la version native de l'application en utilisant l'annotation  `@NativeImageTest` (uniquement des tests en mode boite noire)
+
 ## Déployer notre application
 
 Maintenant que nous avons une application minimale qui fonctionne, regardons comment la packager et la déployer.
@@ -372,3 +374,38 @@ De la même manière, il faut ensuite construire l'image Docker
 
 Quand on compare la taille des deux images générées, on peut voir une différence significative entre les deux (300MB vs 218MB)
 
+### Création d'un cluster Kubernetes local
+
+Pour cela, nous allons utiliser k3d, une distribution légère de Kubernetes.
+
+Pour installer k3d, vous pouvez lancer la commande
+
+`$ wget -q -O - https://raw.githubusercontent.com/rancher/k3d/master/install.sh | bash` 
+
+ou bien suivre les instructions sur le site officiel https://k3s.io/ (alors oui le site c'est k3**S** et le github k3**D**, mystère à résoudre, je suis parti sur k3d comme c'est le nom de la commande )
+
+On peut vérifier que l'installation s'est bien déroulée, `k3d -v` doit nous renvoyer la version de k3d.
+
+Il faut ensuite créer un cluster avec `k3d create`.
+
+> Si le port 6443 est déjà occupé, vous pouvez changer de port avec `k3d create -a 0.0.0.0:6550` 
+
+Puis faire en sorte que kubectl pointe vers ce cluster :
+
+`export KUBECONFIG=$(k3d get-kubeconfig)`.
+
+Vérifions maintenant que le cluster est bien démarré :
+
+`kubectl get pods --all-namespaces` 
+
+> Si vous voulez redémarrer un cluster, vous pouvez commencer par lister l'ensemble des clusters de la machine `k3d list` puis démarrer le cluster avec `k3d start nom-du-cluster` 
+>
+> Il faut également relancer l'export de la variable d'environnement `export KUBECONFIG=$(k3d get-kubeconfig)`
+
+```
+kubectl create deployment kubernetes-zykomot --image=quarkus/zykomot:latest
+```
+
+On peut vérifier que le déploiement s'est bien déroulé avec `kubectl get deployments` ou bien `kubectl get pods`.
+
+Il reste une dernière étape, qui est d'ouvrir le port *5432* afin que notre application puisse accéder à la base de données.
