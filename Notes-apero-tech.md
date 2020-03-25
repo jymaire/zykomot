@@ -6,7 +6,11 @@
 - Maven 3.6.2 ou plus
 - Idéalement GraalVM pour la partie compilation native
 
+Installer native image pour pouvoir générer l'image native (si pas fait en avance, un message dans Maven demandera de l'installer en indiquant la commande)
 
+```
+gu install native-image
+```
 
 ## Commandes
 
@@ -25,13 +29,13 @@ ou bien https://code.quarkus.io/
 Compiler
 
 ```shell
-./mvnw compile quarkus:dev
+mvn compile quarkus:dev
 ```
 
 Tester
 
 ```
-./mvnw test
+mvn test
 ```
 
 URL appli
@@ -49,7 +53,7 @@ mvn quarkus:list-extensions
 ```
 
 ```
-./mvnw quarkus:add-extension -Dextensions="jdbc-postgresql,hibernate-orm-panache,hibernate-validator,resteasy-jsonb"
+mvn quarkus:add-extension -Dextensions="jdbc-postgresql,hibernate-orm-panache,hibernate-validator,resteasy-jsonb"
 ```
 
 Packager en natif
