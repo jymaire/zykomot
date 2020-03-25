@@ -6,11 +6,15 @@ Il est très fortement inspiré d'un workshop disponible sur le site officiel ht
 
 ## Pourquoi Quarkus
 
-Quarkus répond au besoin de pouvoir exécuter des applications Java dans le cloud, notamment en utilisant le mode serverless des différents clouds  (e.g AWS Lambda ). Jusqu'à présent, cela était impossible du fait du temps de démarrage d'une application (plusieurs secondes, voir dizaines de secondes). Un autre objectif est également de réduire l'empreinte mémoire des applications (qui peuvent faire plus d'une dizaine de Mo pour un simple "Hello World")
+Quarkus répond au besoin de pouvoir exécuter des applications Java dans le cloud, notamment en utilisant le mode serverless des différents clouds  (e.g AWS Lambda ). Jusqu'à présent, cela était impossible du fait du temps de démarrage d'une application (plusieurs secondes, voir dizaines de secondes). Un autre objectif est également de réduire l'empreinte mémoire des applications (qui peuvent faire plus d'une dizaine de Mo pour un simple "Hello World").
+
+On peut voir Quarkus comme un intermédiaire entre GraalVM et les différents frameworks Java.
 
 ### Sa philosophie
 
 L'idée, c'est  de transférer le plus possible de la charge qui est traditionnellement effectuée lors du démarrage de l'application, vers l'étape de build de l'application. Cette étape sera donc plus longue mais ne sera faite qu'une seule fois.
+
+Quarkus permet également d'avoir de la programmation impérative et de la programmation réactive dans la même stack.
 
 ### GraalVM
 
@@ -119,7 +123,7 @@ Plusieurs choses intéressantes :
 
 Première étape : compiler notre code. Pour cela, se rendre dans le répertoire contenant le fichier pom.xml et lancer la commande
 
-`./mvnw compile quarkus:dev:`
+`./mvnw compile quarkus:dev`
 
 Voici le résultat attendu :
 ```shell
@@ -134,6 +138,8 @@ __  ____  __  _____   ___  __ ____  ______
 ```
 
 À noter le goal "dev" qui permet de faire du rechargement à chaud. Chaque fois que l'API va être appelée, Quarkus va redémarrer l'application si le code a été changé. Comme dans notre cas, le démarrage a duré moins d'une seconde, cela n'est pas dérangeant.
+
+> *mvnw* est un wrapper qui permet de s'assurer que Maven est bien dans une certaine version
 
 Si vous coupez et relancez la commande, le temps de compilation devrait diminuer un petit peu.
 
@@ -184,7 +190,7 @@ docker run --ulimit memlock=-1:-1 -it --rm=true --memory-swappiness=0 \
 Pour faire le lien entre notre application et la base de donnée, nous avons besoin d'installer des extensions.
 
 ```shell
-$ ./mvnw quarkus:add-extension -Dextensions="jdbc-postgresql,hibernate-orm-panache,hibernate-validator,resteasy-jsonb"
+./mvnw quarkus:add-extension -Dextensions="jdbc-postgresql,hibernate-orm-panache,hibernate-validator,resteasy-jsonb"
 ```
 
 Résultat, le pom a été modifié : 
@@ -409,3 +415,23 @@ kubectl create deployment kubernetes-zykomot --image=quarkus/zykomot:latest
 On peut vérifier que le déploiement s'est bien déroulé avec `kubectl get deployments` ou bien `kubectl get pods`.
 
 Il reste une dernière étape, qui est d'ouvrir le port *5432* afin que notre application puisse accéder à la base de données.
+
+## Contraintes
+
+Avant de se lancer dans un projet Quarkus, il faut d'abord jeter un coup d’œil aux différentes restrictions.
+
+### L'intégration de frameworks
+
+Quarkus supporte déjà une liste assez importante de frameworks sous forme d'extensions (https://quarkus.io/extensions/), cependant, il n'est pas dit que le framework que vous souhaitez utiliser soit compatible avec la manière de compiler de SubstrateVM.
+
+### La réflexion
+
+La réflexion au runtime n'est pas possible avec la compilation Ahead Of Time car SubstrateVM ne peut pas anticiper quelles classes charger. Il est possible de contourner cela en rajoutant dans un fichier json la liste des classes qu'on souhaite
+
+### Le chargement dynamique de classe
+
+Non supporté (pareil, contrainte liée au type de compilation)
+
+### Autres
+
+Le détail exposé dans cette page https://github.com/oracle/graal/blob/master/substratevm/LIMITATIONS.md
